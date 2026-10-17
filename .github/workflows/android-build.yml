@@ -19,44 +19,42 @@ jobs:
       - name: Configurar Java
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Preparar projeto
+      - name: Procurar e extrair projeto ZIP se existir
         run: |
-          sudo apt-get update
-          sudo apt-get install -y unzip
-          mkdir projeto
-          unzip -q I-Music-Android.zip -d projeto
-          echo "Conteudo extraido:"
-          find projeto -maxdepth 4 -type f | head -100
-
-      - name: Localizar projeto Gradle
-        id: projeto
-        run: |
-          BUILD_FILE=$(find projeto -name settings.gradle.kts -type f | head -1)
-          if [ -z "$BUILD_FILE" ]; then
-            echo "Erro: settings.gradle.kts nao encontrado."
-            exit 1
-          fi
-          echo "dir=$(dirname "$BUILD_FILE")" >> "$GITHUB_OUTPUT"
-
-      - name: Compilar APK
-        working-directory: .
-        run: |
-          PROJECT_DIR="${{ steps.projeto.outputs.dir }}"
-          cd "$PROJECT_DIR"
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            ./gradlew assembleDebug --stacktrace
+          if [ -f "I-Music-Android.zip" ]; then
+            echo "A extrair I-Music-Android.zip..."
+            unzip -q I-Music-Android.zip -d extracted_project
           else
-            echo "Erro: ficheiro gradlew nao encontrado no projeto."
+            mkdir -p extracted_project
+            cp -r * extracted_project/ 2>/dev/null || true
+          fi
+
+      - name: Localizar pasta com gradlew e Compilar APK
+        run: |
+          # Encontrar a pasta exata que contém o gradlew
+          GRADLEW_PATH=$(find . -name "gradlew" -type f | head -n 1)
+          
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "Erro: ficheiro gradlew nao encontrado em nenhum sitio do projeto."
             exit 1
           fi
+          
+          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
+          echo "Encontrado gradlew em: $PROJECT_DIR"
+          
+          cd "$PROJECT_DIR"
+          chmod +x gradlew
+          
+          echo "A compilar o APK (assembleDebug)..."
+          ./gradlew assembleDebug
 
       - name: Disponibilizar APK
         uses: actions/upload-artifact@v4
         with:
-          name: I-Musica-APK
-          path: projeto/**/build/outputs/apk/**/*.apk
-          if-no-files-found: error
+          name: app-debug
+          path: |
+            **/build/outputs/apk/debug/*.apk
+            **/app/build/outputs/apk/debug/*.apk
