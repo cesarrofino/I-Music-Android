@@ -33,20 +33,20 @@ jobs:
 
       - name: Garantir gradlew e Compilar APK
         run: |
-          # Encontrar a pasta do projeto Android dentro de extracted_project
-          PROJECT_DIR=$(find extracted_project -name "build.gradle.kts" -o -name "build.gradle" | head -n 1 | xargs dirname)
+          # Encontrar a pasta raiz do projeto Gradle (onde esta o settings.gradle ou settings.gradle.kts)
+          ROOT_PROJECT_DIR=$(find extracted_project -name "settings.gradle.kts" -o -name "settings.gradle" | head -n 1 | xargs dirname)
           
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "Erro: Pasta do projeto Gradle nao encontrada."
+          if [ -z "$ROOT_PROJECT_DIR" ]; then
+            echo "Erro: Pasta raiz do projeto Gradle nao encontrada."
             exit 1
           fi
           
-          cd "$PROJECT_DIR"
-          echo "Diretorio do projeto: $(pwd)"
+          cd "$ROOT_PROJECT_DIR"
+          echo "Diretorio raiz do projeto: $(pwd)"
           
-          # Se o gradlew nao existir no ZIP, criamo-lo automaticamente usando o Gradle instalado no servidor
+          # Se o gradlew nao existir, geramos o wrapper na raiz do projeto
           if [ ! -f "gradlew" ]; then
-            echo "gradlew nao encontrado no ZIP. A gerar wrapper do Gradle..."
+            echo "gradlew nao encontrado. A gerar wrapper do Gradle na raiz..."
             gradle wrapper
           fi
           
