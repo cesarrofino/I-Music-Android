@@ -1,1 +1,62 @@
 
+name: Compilar I-Musica Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'I-Music-Android.zip'
+      - '.github/workflows/android-build.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Obter ficheiros do repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Preparar projeto
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip
+          mkdir projeto
+          unzip -q I-Music-Android.zip -d projeto
+          echo "Conteudo extraido:"
+          find projeto -maxdepth 4 -type f | head -100
+
+      - name: Localizar projeto Gradle
+        id: projeto
+        run: |
+          BUILD_FILE=$(find projeto -name settings.gradle.kts -type f | head -1)
+          if [ -z "$BUILD_FILE" ]; then
+            echo "Erro: settings.gradle.kts nao encontrado."
+            exit 1
+          fi
+          echo "dir=$(dirname "$BUILD_FILE")" >> "$GITHUB_OUTPUT"
+
+      - name: Compilar APK
+        working-directory: .
+        run: |
+          PROJECT_DIR="${{ steps.projeto.outputs.dir }}"
+          cd "$PROJECT_DIR"
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug --stacktrace
+          else
+            echo "Erro: ficheiro gradlew nao encontrado no projeto."
+            exit 1
+          fi
+
+      - name: Disponibilizar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: I-Musica-APK
+          path: projeto/**/build/outputs/apk/**/*.apk
+          if-no-files-found: error
