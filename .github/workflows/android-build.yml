@@ -21,35 +21,35 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Listar e extrair ZIP
+      - name: Extrair ZIP do Projeto
         run: |
-          echo "=== Ficheiros na raiz do repositorio ==="
-          ls -la
-          
           if [ -f "I-Music-Android.zip" ]; then
             echo "A descompactar I-Music-Android.zip..."
             unzip -o I-Music-Android.zip -d extracted_project
-            echo "=== Conteudo da pasta extraida ==="
-            ls -la extracted_project
           else
-            echo "Ficheiro ZIP nao encontrado na raiz!"
+            echo "Erro: I-Music-Android.zip nao encontrado!"
             exit 1
           fi
 
-      - name: Localizar pasta com gradlew e Compilar APK
+      - name: Garantir gradlew e Compilar APK
         run: |
-          # Procurar o gradlew dentro da pasta extraida
-          GRADLEW_PATH=$(find extracted_project -name "gradlew" -type f | head -n 1)
+          # Encontrar a pasta do projeto Android dentro de extracted_project
+          PROJECT_DIR=$(find extracted_project -name "build.gradle.kts" -o -name "build.gradle" | head -n 1 | xargs dirname)
           
-          if [ -z "$GRADLEW_PATH" ]; then
-            echo "Erro: ficheiro gradlew nao encontrado apos descompactar."
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "Erro: Pasta do projeto Gradle nao encontrada."
             exit 1
           fi
           
-          PROJECT_DIR=$(dirname "$GRADLEW_PATH")
-          echo "Encontrado gradlew em: $PROJECT_DIR"
-          
           cd "$PROJECT_DIR"
+          echo "Diretorio do projeto: $(pwd)"
+          
+          # Se o gradlew nao existir no ZIP, criamo-lo automaticamente usando o Gradle instalado no servidor
+          if [ ! -f "gradlew" ]; then
+            echo "gradlew nao encontrado no ZIP. A gerar wrapper do Gradle..."
+            gradle wrapper
+          fi
+          
           chmod +x gradlew
           
           echo "A compilar o APK (assembleDebug)..."
